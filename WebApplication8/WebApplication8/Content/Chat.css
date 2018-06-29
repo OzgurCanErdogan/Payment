@@ -1,0 +1,48 @@
+﻿
+body {
+    display: flex;
+    flex-direction: column;
+    font-family: 'Roboto', sans-serif;
+    min-height: 100vh;
+
+    
+}
+#chatForm{height:520px;overflow-y:auto}
+#ChatInputPanel{
+    position: fixed;
+    bottom: 5%;
+    width: 100%;
+    
+} 
+#sendBtn{
+    color: red;
+    font-size: 22px;
+    
+}
+#inputPanel{
+
+     width:350px;
+     height:80px;
+     
+}
+
+.container {
+    border: 3px solid #dedede;
+    background-color: #f1f1f1;
+    border-radius: 20px;
+    padding: 10px;
+    margin: 5px 0;
+}
+
+/* Darker chat container */
+.darker {
+    border-color: #ccc;
+    background-color: #ddd;
+}
+header {
+
+}
+footer {
+    position: absolute;
+    bottom: 0;
+}
