@@ -1,4 +1,8 @@
-﻿$(function () {
+﻿var lel;
+
+
+
+$(function () {
     $('#sendBtn').click(function (e) {
         e.preventDefault();
 
@@ -12,13 +16,27 @@
 
         }).done(function (data) {
             //Successfully pass to server and get response
-            if (data.result = "OK") {
+            if (data.result == "OK") {
                 $('#chatForm').append('<div class="container" align="left">' +
                 '<img src="/w3images/avatar_g2.jpg" alt="Bot" class="right">' +
                 '<p>' + data.chatVal + '</p>' +
                 '</div>');
-                //var test = JSON.parse(data);
-                alert("submit successfully."+ data.chatVal);
+            }
+            if(data.result=="Table"){
+                
+                $('#chatForm').append('<div class="container" align="left">' +
+                    '<img src="/w3images/avatar_g2.jpg" alt="Bot" class="right">' +
+                    '<p>' + data.tableInfo.message + '</p>' +
+                    '</div>');
+                $('#chatForm').append('<div class="container" align="left">' +
+                 '<table style="width:100%">' +
+                  '<tr>' +
+                   '<th>Karton No</th>' +
+                    '<th>Karton Borç</th>' +
+                  '</tr>' +
+                  data.tableInfo.tableData +
+                '</table>' +
+                '</div>');
             }
         }).fail(function (response) {
             if (response.status != 0) {
@@ -30,6 +48,9 @@
     });
 
 });
+//$(function(){
+
+//});
 //function getPerson(list) {
 //    $.ajax({
 //        url: "../Default/AjaxGet",
@@ -74,7 +95,7 @@ $(function () {
                 scrollTop: document.body.scrollHeight
             }, 500);
             //Sistem mesajı buradan yayınlayacak
-            
+
         });
     });
 
