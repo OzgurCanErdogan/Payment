@@ -37,6 +37,10 @@ $(function () {
                   data.tableInfo.tableData +
                 '</table>' +
                 '</div>');
+                $('#chatForm').append('<div class="container" align="left">' +
+                    '<img src="/w3images/avatar_g2.jpg" alt="Bot" class="right">' +
+                    '<p> Toplam borcunuz: ' + data.tableInfo.total + ' Ödeme planı yaratmak ister misiniz?</p>' +
+                    '</div>');
             }
         }).fail(function (response) {
             if (response.status != 0) {

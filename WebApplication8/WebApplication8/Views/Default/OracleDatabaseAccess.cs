@@ -30,19 +30,19 @@ namespace WebApplication8.Views.Default
                                                                                         ")" +
                                                                                       ")";
             con = new OracleConnection(connectionString);
-            OpenConnection();
         }
-        public void OpenConnection()
-        {
-            con.Open();
-        }
-        void Close()
-        {
-            con.Close();
-            con.Dispose();
-        }
+        //public void OpenConnection()
+        //{
+        //    con.Open();
+        //}
+        //void Close()
+        //{
+        //    con.Close();
+        //    con.Dispose();
+        //}
         public CustomerData GetCustomerInfo(int müstNo)
         {
+            con.Open();
             CustomerData result = new CustomerData();
             string query = "select * from CUST.TOA_MUSTERI_BILGI where MUSTERI_NO =" + müstNo;
             OracleCommand command = new OracleCommand(query, con);
@@ -59,10 +59,13 @@ namespace WebApplication8.Views.Default
             }
             dataReader.Close();
             //this.Close();
+            con.Close();
+            //con.Dispose();
             return result;
         }
         public List<Account> GetCustomerAccounts(int müstNo)
         {
+            con.Open();
             List<Account> accounts = new List<Account>();
             string query = "select * from ACC.TOA_KARTON_BILGI where MUSTERI_NO =" + müstNo + " and TOA_DURUM_KODU = 1";
             OracleCommand command = new OracleCommand(query, con);
@@ -82,6 +85,8 @@ namespace WebApplication8.Views.Default
                 accounts.Add(temp);
             }
             dataReader.Close();
+            con.Close();
+            //con.Dispose();
             return accounts;
         }
     }

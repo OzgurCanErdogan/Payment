@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web;
 using System.Web.Mvc;
 using WebApplication8.Models;
@@ -14,7 +16,7 @@ namespace WebApplication8.Controllers
         ChatModel chat = new ChatModel();
         CustomerData customer;
         string StateOfChat;
-        OracleDatabaseAccess conn = new OracleDatabaseAccess();
+        OracleDatabaseAccess conn;
 
         /*
         ValidMüsNo
@@ -40,12 +42,14 @@ namespace WebApplication8.Controllers
             chat.botFalsePath = new Dictionary<string, string>();
             chat.usersChat = new Dictionary<string, string>();
             customer = new CustomerData();
+            conn = new OracleDatabaseAccess();
             //chat.botCorrectPath.Add("ValidMüsNo", "Merhaba Özgür Can Erdoğan, karton bilgileriniz size gösterilecektir. Ödeme planı yapmak ister misiniz?");
             chat.botCorrectPath.Add("InvalidMüsNo", "Girdiğiniz verilerle ilgili bir hesap bulunamadı. Bilgilerinizi kontrol edip tekrar giriniz.");
             chat.botCorrectPath.Add("GetMonth", "Kaç ayda ödemek istersiniz?");
             chat.botCorrectPath.Add("GetMonthAgain", "Girdiğiniz veri sadece rakamlardan oluşmalı. Tekrar giriniz");
             chat.botCorrectPath.Add("GetStartDate", "Ödemeye ne zaman başlayacağınızı belirtiniz. (dd/MM/yyyy formatında olmalı)");
             chat.botCorrectPath.Add("GetStartDateAgain", "Girdiğiniz veriyi kontrol edin. (dd/MM/yyyy formatında olmalı)");
+            chat.botCorrectPath.Add("CalculatePlan", "Talebiniz doğrultusunda ödeme planı taslağınız oluşturulmuştur");
 
             chat.botFalsePath.Add("InvalidMüsNo", "Girdiğiniz değerle eşleşen müşteri numarası çıkmadı. Tekrar kontrol edip girer misiniz");
             chat.usersChat.Add("MüsNo", "null");
@@ -131,13 +135,61 @@ namespace WebApplication8.Controllers
         string[] formats = {"d/M/yyyy", "dd/M/yyyy",
                    "d/MM/yyyy","dd/MM/yyyy" };
 
+        public DateTime? GetDate(string input)
+        {
+            var regex = new Regex(@"\b\d{2}\.\d{2}.\d{4}\b");
+            foreach (Match m in regex.Matches(input))
+            {
+                DateTime dt;
+                if (DateTime.TryParseExact(m.Value, "dd.MM.yyyy", null, DateTimeStyles.None, out dt))
+                    return dt;
+            }
+            return null;
+        }
+
+        public decimal PaymentPlan(decimal debt, int month)
+        {
+            double interest;
+            if (month < 12)
+            {
+                interest = 1.2;
+            }
+            else if(11 < month && month < 24)
+            {
+                interest = 1.5;
+            }
+            else if(23 < month && month < 36)
+            {
+                interest = 1.8;
+            }
+            else
+            {
+                interest = 2;
+            }
+            decimal newDebt = debt * month * (decimal)interest;
+            List<string> dates = new List<string>();
+
+            return newDebt;
+        }
+
+        public List<DateTime> fillDateData(DateTime? date, int month)
+        {
+            List<DateTime> result = new List<DateTime>();
+            for(int i =1; i <= month; i++)
+            {
+                DateTime temp = (DateTime)date;
+                result.Add(temp);
+                temp = temp.AddMonths(1);
+            }
+            return result;
+        }
 
         //4. AJAX Call
         [HttpPost]
         public JsonResult Ajax(string AJAXParameter1)
         {
             chat = (ChatModel)TempData["Chat"];
-            string result = "False";
+            string result = "OK";
             customer = (CustomerData)TempData["CustomerObj"];
             JsonSendTable tableInfo = new JsonSendTable();
 
@@ -156,27 +208,33 @@ namespace WebApplication8.Controllers
                         StateOfChat = "ValidMüsNo";
                         TempData["StateOfChat"] = StateOfChat;
 
-                        chat.botCorrectPath.Add("ValidMüsNo", "Merhaba "+customer.MUSTERI_ADI+", karton bilgileriniz size gösterilecektir. Ödeme planı yapmak ister misiniz?");
-                        
-                        result = "table";
-                        tableInfo.message = chat.botCorrectPath[StateOfChat];
-                        tableInfo.tableData = "<tr>" +
-                            "<td>" + customer.ACCOUNTS[1].KARTON_KODU + "</td>" +
-                            "<td>" + customer.ACCOUNTS[1].BAKIYE + "</td>" +
-                          "</tr>" +
-                          "<tr>" +
-                            "<td>####</td>" +
-                            "<td>####</td>" +
-                          "</tr>" +
-                          "<tr>" +
-                            "<td>####</td>" +
-                            "<td>####</td>" +
-                          "</tr>" +
-                          "<tr>" +
-                            "<td>####</td>" +
-                            "<td>####</td>" +
-                          "</tr>";
-                        result = "Table";
+                        chat.botCorrectPath.Add("ValidMüsNo", "Merhaba "+customer.MUSTERI_ADI+", karton bilgileriniz size gösterilecektir.");
+                        if (customer.ACCOUNTS.Count > 0)
+                        {
+                            result = "Table";
+                            tableInfo.message = chat.botCorrectPath[StateOfChat];
+                            decimal total = customer.ACCOUNTS[0].BAKIYE;
+                            tableInfo.tableData = "<tr>" +
+                                "<td>" + customer.ACCOUNTS[0].KARTON_KODU + "</td>" +
+                                "<td>" + customer.ACCOUNTS[0].BAKIYE + "</td>" +
+                              "</tr>";
+                            for(int i=1; i< customer.ACCOUNTS.Count; i++)
+                            {
+                                total = +customer.ACCOUNTS[i].BAKIYE;
+                                tableInfo.tableData += "<tr>" +
+                                                        "<td>"+customer.ACCOUNTS[i].KARTON_KODU+"</td>" +
+                                                        "<td>"+customer.ACCOUNTS[i].BAKIYE+"</td>" +
+                                                        "</tr>";
+                            }
+                            tableInfo.total = total;
+                        }
+                        else
+                        {
+                            StateOfChat = "NoDebt";
+                            TempData["StateOfChat"] = StateOfChat;
+                            chat.botCorrectPath.Add("NoDebt", "Merhaba " + customer.MUSTERI_ADI + ". Aktif borcunuz bulunmuyor. Sistemden çıkış yapabilirsiniz");
+                            //Borç un olmadğı state
+                        }
                     }
                     else
                     {
@@ -193,9 +251,10 @@ namespace WebApplication8.Controllers
                 }
 
             }
-            else if (TempData["StateOfChat"].Equals("ValidMüsNo"))
+            else if (TempData["StateOfChat"].Equals("ValidMüsNo") || TempData["StateOfChat"].Equals("GetMonthAgain"))
             {
-                if (AJAXParameter1.Equals("Evet"))
+                string tempComp = AJAXParameter1.ToLower();
+                if (tempComp.Equals("evet"))
                 {
                     chat.usersChat.Add("GetAnsPaymentPlan", AJAXParameter1);
                     //StateOfChat = "FillTable";
@@ -203,15 +262,21 @@ namespace WebApplication8.Controllers
                     TempData["StateOfChat"] = StateOfChat;
                     result = "OK";
                 }
-                else if (AJAXParameter1.Equals("Hayır"))
+                else if (tempComp.Equals("hayır") || tempComp.Equals("hayir"))
                 {
                     chat.usersChat.Add("GetAnsPaymentPlan", AJAXParameter1);
+                    chat.botCorrectPath.Add("DeclinedPlan", customer.MUSTERI_ADI + ", borcunuz ay sonu itibariyle XXXX TL olacaktır. Borcunuza temerrüt faizi her gün işlenmektedir. Banka icra yoluna gidebilir");
                     StateOfChat = "DeclinedPlan";
                     TempData["StateOfChat"] = StateOfChat;
                     result = "OK";
                 }
+                else
+                {
+                    StateOfChat = "GetMonthAgain";
+                    TempData["StateOfChat"] = StateOfChat;
+                }
             }
-            else if (TempData["StateOfChat"].Equals("GetMonth") || TempData["StateOfChat"].Equals("GetMonthAgain"))
+            else if (TempData["StateOfChat"].Equals("GetMonth") || TempData["StateOfChat"].Equals("GetInstallmentAgain"))
             {
                 if (IsAllDigits(AJAXParameter1))
                 {
@@ -222,26 +287,34 @@ namespace WebApplication8.Controllers
                 }
                 else
                 {
-                    StateOfChat = "GetMonthAgain";
+                    StateOfChat = "GetInstallmentAgain";
                     TempData["StateOfChat"] = StateOfChat;
                     result = "OK";
                 }
             }
             else if (TempData["StateOfChat"].Equals("GetStartDate") || TempData["StateOfChat"].Equals("GetStartDateAgain"))
             {
-                if (IsAllDigits(AJAXParameter1))
+                DateTime? dateData = GetDate(AJAXParameter1);
+                if (dateData !=null)
                 {
-                    chat.usersChat.Add("GetMonth", AJAXParameter1);
-                    StateOfChat = "GetPlan";
+                    chat.usersChat.Add("GetStartDate", AJAXParameter1);
+                    StateOfChat = "CalculatePlan";
                     TempData["StateOfChat"] = StateOfChat;
                     result = "OK";
                 }
                 else
                 {
-                    StateOfChat = "GetMonthAgain";
+                    StateOfChat = "GetStartDateAgain";
                     TempData["StateOfChat"] = StateOfChat;
                     result = "OK";
                 }
+            }
+            else
+            {
+                //StateOfChat = "NoAction";
+                //TempData["StateOfChat"] = StateOfChat;
+                //chat.botCorrectPath.Add("NoAction", "Sistemden çıkış yapabilirsiniz");
+                //Button u disable et
             }
 
             List<string> data = new List<string>();
@@ -251,31 +324,7 @@ namespace WebApplication8.Controllers
             TempData["DatabaseConnection"] = conn;
             string chatVal = chat.botCorrectPath[StateOfChat];
 
-            //if (TempData["StateOfChat"].Equals())
-            //{
-            //    StateOfChat = "GetMonth";
-            //    TempData["StateOfChat"] = StateOfChat;
-            //    JsonSendTable tableInfo = new JsonSendTable();
-            //    result = "table";
-            //    tableInfo.message = chat.botCorrectPath[StateOfChat];
-            //    tableInfo.tableData = "<tr>" +
-            //        "<td>"+customer.ACCOUNTS[1].KARTON_KODU+"</td>" +
-            //        "<td>"+customer.ACCOUNTS[1].BAKIYE+"</td>" +
-            //      "</tr>" +
-            //      "<tr>" +
-            //        "<td>####</td>" +
-            //        "<td>####</td>" +
-            //      "</tr>" +
-            //      "<tr>" +
-            //        "<td>####</td>" +
-            //        "<td>####</td>" +
-            //      "</tr>" +
-            //      "<tr>" +
-            //        "<td>####</td>" +
-            //        "<td>####</td>" +
-            //      "</tr>";
-            //    return Json(new { tableInfo, result});
-            //}
+
             if(result.Equals("Table"))
                 return Json(new { tableInfo, result });
 

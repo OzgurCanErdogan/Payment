@@ -9,6 +9,7 @@ namespace WebApplication8.Models
     {
         public string message { get; set; }
         public string tableData { get; set; }
+        public decimal total { get; set; }
     }
 
     //public class testData
