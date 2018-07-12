@@ -53,7 +53,7 @@ namespace WebApplication8.Controllers
                 chat.botCorrectPath.Add("GetStartDateAgain", "Girdiğiniz veriyi kontrol edin. (dd.MM.yyyy formatında olmalı)");
                 chat.botCorrectPath.Add("GetStartDateAgainFurther", "Girdiğiniz tarih bugünden ileri tarihli olmalı, lütfen tekrar giriniz.");
                 chat.botCorrectPath.Add("GetInstallmentAgain", "Girdiğinizi anlayamadım. Sadece sayı giriniz.");
-                chat.botCorrectPath.Add("CreatePaymentPlan", "Ödeme planı tercihiniz onay mekanizmasına dahil edilmiştir.");
+                
                 chat.botCorrectPath.Add("CalculatePlanAgain", "Cevabınızı anlayamadım. Cevap olarak Evet ya da Hayır giriniz.");
                 
                 chat.botCorrectPath.Add("CalculatePlan", "Talebiniz doğrultusunda ödeme planı taslağınız tablodaki gibi oluşturulmuştur. Borcunuzu bu şekilde yapılandırmayı kabul ediyor musunuz?");
@@ -61,7 +61,11 @@ namespace WebApplication8.Controllers
             if(TempData.Peek("DatabaseConnection") == null)
                 conn = new OracleDatabaseAccess();
             if(TempData["CustomerObj"] == null)
+            {
                 customer = new CustomerData();
+                customer.ACCOUNTS = new List<Account>();
+                customer.PLAN = new PaymentPlan();
+            }
 
            
             if(TempData.Peek("StateOfChat") == null)
@@ -91,6 +95,8 @@ namespace WebApplication8.Controllers
             if (TempData.Peek("CustomerObj") == null)
             {
                 TempData["CustomerObj"] = customer;
+                TempData["AccountObj"] = customer.ACCOUNTS;
+                TempData["PaymentObj"] = customer.PLAN;
             }
             if (TempData.Peek("StateOfChat") == null)
             {
@@ -203,8 +209,7 @@ namespace WebApplication8.Controllers
 
             return false;
         }
-
-        public decimal CalculatedDebt(decimal debt, DateTime date)
+        public double GetInterest(decimal debt, DateTime date)
         {
             DateTime currentTime = DateTime.Now;
             var difference = date.Month - currentTime.Month;
@@ -213,11 +218,11 @@ namespace WebApplication8.Controllers
             {
                 interest = 0.2;
             }
-            else if(11 < difference && difference < 24)
+            else if (11 < difference && difference < 24)
             {
                 interest = 0.5;
             }
-            else if(23 < difference && difference < 36)
+            else if (23 < difference && difference < 36)
             {
                 interest = 0.8;
             }
@@ -225,7 +230,32 @@ namespace WebApplication8.Controllers
             {
                 interest = 1;
             }
-            decimal newDebt = debt * (decimal)interest*difference + debt;
+            return interest;
+        }
+        public decimal CalculatedDebt(decimal debt, DateTime date)
+        {
+            DateTime currentTime = DateTime.Now;
+            var diff = date - currentTime;
+            var difference = date.Month - currentTime.Month;
+            int monthDif = diff.Days / 30;
+            double interest = 0;
+            if (difference <= 12)
+            {
+                interest = 0.2;
+            }
+            else if(12 < difference && difference <= 24)
+            {
+                interest = 0.5;
+            }
+            else if(24 < difference && difference <= 36)
+            {
+                interest = 0.8;
+            }
+            else
+            {
+                interest = 1;
+            }
+            decimal newDebt = debt * (decimal)interest* monthDif/12 + debt;
             //List<string> dates = new List<string>();
 
             return newDebt;
@@ -264,6 +294,7 @@ namespace WebApplication8.Controllers
             TempData["CustomerObj"] = null;
             TempData["DatabaseConnection"] = null;
             TempData["StateOfChat"] = null;
+            Index();
         }
         //4. AJAX Call
         [HttpPost]
@@ -272,6 +303,9 @@ namespace WebApplication8.Controllers
             chat = (ChatModel)TempData["Chat"];
             string result = "OK";
             customer = (CustomerData)TempData["CustomerObj"];
+            //customer.ACCOUNTS = (List<Account>)TempData["AccountObj"];
+            //customer.PLAN = (PaymentPlan)TempData.Peek("PaymentObj");
+            //customer.PLAN.TAKSIT_SAYISI = 8;
             JsonSendTable tableInfo = new JsonSendTable();
             JsonSendTable paymentPlanTable = new JsonSendTable();
             AJAXParameter1 = AJAXParameter1.Trim();
@@ -310,7 +344,10 @@ namespace WebApplication8.Controllers
                                                         "<td>"+customer.ACCOUNTS[i].BAKIYE+"</td>" +
                                                         "</tr>";
                             }
+                            customer.PLAN = new PaymentPlan();
                             tableInfo.total = total;
+                            customer.PLAN.PLAN_ONCESI_BAKIYE = total;
+                            customer.PLAN.TOA_DURUM_KODU = '1';
                         }
                         else
                         {
@@ -354,7 +391,7 @@ namespace WebApplication8.Controllers
                     chat.botCorrectPath.Add("DeclinedPlan", customer.MUSTERI_ADI + ", borcunuz ay sonu itibariyle "+ TotalDebt(customer) +" TL olacaktır. Borcunuza temerrüt faizi her gün işlenmektedir. Banka icra yoluna gidebilir");
                     StateOfChat = "DeclinedPlan";
                     TempData["StateOfChat"] = StateOfChat;
-                    result = "OK";
+                    result = "Done";
                 }
                 else
                 {
@@ -370,6 +407,7 @@ namespace WebApplication8.Controllers
                     StateOfChat = "GetStartDate";
                     TempData["StateOfChat"] = StateOfChat;
                     result = "OK";
+                    customer.PLAN.TAKSIT_SAYISI = Int32.Parse(AJAXParameter1);
                 }
                 else
                 {
@@ -391,8 +429,12 @@ namespace WebApplication8.Controllers
                         int month = Int32.Parse(chat.usersChat["GetMonth"]);
                         List<DateTime> dates = new List<DateTime>();
                         dates = FillDateData(dateData, month);
+                        customer.PLAN.BASLANGIC_TARIHI = dates[0];
+                        customer.PLAN.BITIS_TARIHI = dates[dates.Count - 1];
                         decimal totalDebt = TotalDebt(customer);
                         decimal monthlyPayment = Installment(totalDebt, month, dateData);
+                        customer.PLAN.FAIZ_ORANI = GetInterest(month, dateData);
+                        customer.PLAN.TAKSIT_TUTARI = Math.Round(monthlyPayment, 2);
                         for (int i = 0; i < dates.Count; i++)
                         {
                             tableInfo.tableData += "<tr>" +
@@ -401,6 +443,7 @@ namespace WebApplication8.Controllers
                                                     "</tr>";
                         }
                         tableInfo.total = Math.Round(CalculatedDebt(totalDebt, dateData),2);
+                        customer.PLAN.PLAN_SONRASI_BAKIYE = tableInfo.total;
                         tableInfo.message = chat.botCorrectPath[StateOfChat];
                     }
                     else
@@ -427,7 +470,10 @@ namespace WebApplication8.Controllers
                     //StateOfChat = "FillTable";
                     StateOfChat = "CreatePaymentPlan";
                     TempData["StateOfChat"] = StateOfChat;
-                    result = "OK";
+                    result = "Done";
+                    customer.PLAN.KREDI_YAPILANDIRILMASI = true;
+                    string paymentApplication = conn.AddPaymentPlan(customer);
+                    chat.botCorrectPath.Add("CreatePaymentPlan", paymentApplication);
                 }
                 else if (tempComp.Equals("hayır") || tempComp.Equals("hayir") && !String.IsNullOrEmpty(AJAXParameter1))
                 {
@@ -435,7 +481,8 @@ namespace WebApplication8.Controllers
                     chat.botCorrectPath.Add("DeclinedPlan2", customer.MUSTERI_ADI + ", borcunuz ay sonu itibariyle " + TotalDebt(customer) + " TL olacaktır. Borcunuza temerrüt faizi her gün işlenmektedir. Banka icra yoluna gidebilir");
                     StateOfChat = "DeclinedPlan2";
                     TempData["StateOfChat"] = StateOfChat;
-                    result = "OK";
+                    result = "Done";
+                    customer.PLAN.KREDI_YAPILANDIRILMASI = false;
                 }
                 else
                 {
@@ -455,6 +502,8 @@ namespace WebApplication8.Controllers
             data.Add("AJAXParameter1=" + AJAXParameter1);
             TempData["Chat"] = chat;
             TempData["CustomerObj"] = customer;
+            TempData["AccountObj"] = customer;
+            TempData["PaymentObj"] = customer;
             TempData["DatabaseConnection"] = conn;
             TempData["StateOfChat"] = StateOfChat;
             string chatVal = chat.botCorrectPath[StateOfChat];

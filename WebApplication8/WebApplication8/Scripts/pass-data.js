@@ -79,7 +79,7 @@ $(function () {
                 '</div>');
                 $('#chatForm').append('<div class="container" align="left">' +
                     '<img alt="Bot" class="right">' +
-                    '<p> Toplam borcunuz: ' + data.tableInfo.total + ' Ödeme planı yaratmak ister misiniz?</p>' +
+                    '<p> Toplam borcunuz: ' + data.tableInfo.total + ' TL. Ödeme planı yaratmak ister misiniz?</p>' +
                     '</div>');
             }
             if (data.result == "PaymentTable") {
@@ -102,6 +102,18 @@ $(function () {
                     '<p> İşlenen faiz ile ödeyeceğiniz toplam ücret: '+data.tableInfo.total+ ' TL. ' + data.tableInfo.message + '</p>' +
                     '</div>');
             }
+            if (data.result == "Done") {
+                $('#chatForm').append('<div class="container" align="left">' +
+                '<img alt="Bot" class="right">' +
+                '<p>' + data.chatVal + '</p>' +
+                '</div>');
+                $('#chatForm').append('<div class="container" align="left">' +
+                '<img alt="Bot" class="right">' +
+                '<p>' + 'Sistemden çıkış yapabilirsiniz.' + '</p>' +
+                '</div>');
+                $("#inputPanel").attr("disabled", "disabled");
+                $("#sendBtn").attr("disabled", "disabled");
+            }
             var scrollingElement = $('#chatForm');
 
             $(scrollingElement).animate({
@@ -114,6 +126,11 @@ $(function () {
         });
 
         $.ajax()
+        var scrollingElement = $('#chatForm');
+
+        $(scrollingElement).animate({
+            scrollTop: document.body.scrollHeight
+        }, 500);
     });
 
 });

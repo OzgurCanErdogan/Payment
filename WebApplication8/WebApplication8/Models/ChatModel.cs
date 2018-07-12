@@ -24,6 +24,7 @@ namespace WebApplication8.Models
         public Int16 YETKI_KODU { get; set; }
         public string MUSTERI_GRUBU { get; set; }
         public List<Account> ACCOUNTS { get; set; }
+        public PaymentPlan PLAN { get; set; }
 
     }
     public class Account
@@ -37,7 +38,19 @@ namespace WebApplication8.Models
         public decimal BAKIYE { get; set; }
         public char TOA_DURUM_KODU { get; set; }
     }
+    public class PaymentPlan
+    {
+        public bool KREDI_YAPILANDIRILMASI { get; set; }
+        public decimal PLAN_ONCESI_BAKIYE { get; set; }
+        public decimal PLAN_SONRASI_BAKIYE { get; set; }
+        public decimal TAKSIT_TUTARI { get; set; }
+        public int TAKSIT_SAYISI { get; set; }
+        public DateTime BASLANGIC_TARIHI { get; set; }
+        public DateTime BITIS_TARIHI { get; set; }
+        public double FAIZ_ORANI { get; set; }
+        public char TOA_DURUM_KODU { get; set; }
 
+    }
     
     public class ChatModel
     {

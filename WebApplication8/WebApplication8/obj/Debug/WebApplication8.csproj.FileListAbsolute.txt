@@ -88,6 +88,6 @@ C:\Users\stj.oerdogan\Documents\GitHub\Payment\WebApplication8\WebApplication8\b
 C:\Users\stj.oerdogan\Documents\GitHub\Payment\WebApplication8\WebApplication8\bin\System.Web.Webpages.Razor.xml
 C:\Users\stj.oerdogan\Documents\GitHub\Payment\WebApplication8\WebApplication8\bin\System.Web.Helpers.xml
 C:\Users\stj.oerdogan\Documents\GitHub\Payment\WebApplication8\WebApplication8\bin\System.Web.Mvc.xml
-C:\Users\stj.oerdogan\Documents\GitHub\Payment\WebApplication8\WebApplication8\obj\Debug\WebApplication8.csprojResolveAssemblyReference.cache
 C:\Users\stj.oerdogan\Documents\GitHub\Payment\WebApplication8\WebApplication8\obj\Debug\WebApplication8.dll
 C:\Users\stj.oerdogan\Documents\GitHub\Payment\WebApplication8\WebApplication8\obj\Debug\WebApplication8.pdb
+C:\Users\stj.oerdogan\Documents\GitHub\Payment\WebApplication8\WebApplication8\obj\Debug\WebApplication8.csprojResolveAssemblyReference.cache
